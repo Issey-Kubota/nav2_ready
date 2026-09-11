@@ -6,7 +6,6 @@
   <maintainer email="89831723+Issey-Kubota@users.noreply.github.com">Nav2 Ready contributors</maintainer>
   <license>Apache-2.0</license>
 
-  <buildtool_depend>ament_python</buildtool_depend>
 
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>lifecycle_msgs</exec_depend>

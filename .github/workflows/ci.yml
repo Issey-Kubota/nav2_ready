@@ -13,9 +13,10 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
+          source /opt/ros/jazzy/setup.bash
           apt-get update
           rosdep update
-          rosdep install --from-paths . --ignore-src -r -y
+          rosdep install --from-paths . --ignore-src -y --rosdistro jazzy
       - name: Build
         shell: bash
         run: |

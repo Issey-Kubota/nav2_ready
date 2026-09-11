@@ -57,7 +57,7 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
             self.sensor_type = None
             self.tf_buffer = Buffer()
             self.tf_listener = TransformListener(self.tf_buffer, self)
-            self.subscriptions = []
+            self.diagnostic_subscriptions = []
 
     distro = os.environ.get("ROS_DISTRO")
     rclpy.init(args=ros_args)
@@ -68,7 +68,7 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
         sensor_types = topic_map.get(config.sensor_topic, [])
 
         if "nav_msgs/msg/Odometry" in odom_types:
-            node.subscriptions.append(
+            node.diagnostic_subscriptions.append(
                 node.create_subscription(
                     Odometry,
                     config.odom_topic,
@@ -80,7 +80,7 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
         sensor_topic_result = validate_sensor_topic(config.sensor_topic, sensor_types)
         if "sensor_msgs/msg/LaserScan" in sensor_types:
             node.sensor_type = "sensor_msgs/msg/LaserScan"
-            node.subscriptions.append(
+            node.diagnostic_subscriptions.append(
                 node.create_subscription(
                     LaserScan,
                     config.sensor_topic,
@@ -90,7 +90,7 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
             )
         elif "sensor_msgs/msg/PointCloud2" in sensor_types:
             node.sensor_type = "sensor_msgs/msg/PointCloud2"
-            node.subscriptions.append(
+            node.diagnostic_subscriptions.append(
                 node.create_subscription(
                     PointCloud2,
                     config.sensor_topic,

@@ -12,6 +12,7 @@ setup(
         ("share/" + package_name, ["package.xml"]),
     ],
     install_requires=["setuptools"],
+    tests_require=["pytest"],
     zip_safe=True,
     maintainer="Nav2 Ready contributors",
     maintainer_email="89831723+Issey-Kubota@users.noreply.github.com",
