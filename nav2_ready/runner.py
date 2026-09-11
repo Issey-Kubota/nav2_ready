@@ -55,7 +55,7 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
             self.odom_message = None
             self.sensor_message = None
             self.sensor_type = None
-            self.tf_buffer = Buffer()
+            self.tf_buffer = Buffer(node=self)
             self.tf_listener = TransformListener(self.tf_buffer, self)
             self.diagnostic_subscriptions = []
 
@@ -63,50 +63,45 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
     rclpy.init(args=ros_args)
     node = DiagnosticNode()
     try:
-        topic_map = dict(node.get_topic_names_and_types())
-        odom_types = topic_map.get(config.odom_topic, [])
-        sensor_types = topic_map.get(config.sensor_topic, [])
+        odom_types = []
+        sensor_types = []
+        odom_subscribed = False
+        odom_stamps = set()
 
-        if "nav_msgs/msg/Odometry" in odom_types:
-            node.diagnostic_subscriptions.append(
-                node.create_subscription(
-                    Odometry,
-                    config.odom_topic,
-                    lambda message: setattr(node, "odom_message", message),
-                    qos_profile_sensor_data,
-                )
-            )
-
-        sensor_topic_result = validate_sensor_topic(config.sensor_topic, sensor_types)
-        if "sensor_msgs/msg/LaserScan" in sensor_types:
-            node.sensor_type = "sensor_msgs/msg/LaserScan"
-            node.diagnostic_subscriptions.append(
-                node.create_subscription(
-                    LaserScan,
-                    config.sensor_topic,
-                    lambda message: setattr(node, "sensor_message", message),
-                    qos_profile_sensor_data,
-                )
-            )
-        elif "sensor_msgs/msg/PointCloud2" in sensor_types:
-            node.sensor_type = "sensor_msgs/msg/PointCloud2"
-            node.diagnostic_subscriptions.append(
-                node.create_subscription(
-                    PointCloud2,
-                    config.sensor_topic,
-                    lambda message: setattr(node, "sensor_message", message),
-                    qos_profile_sensor_data,
-                )
-            )
+        def receive_odom(message):
+            node.odom_message = message
+            stamp = message.header.stamp
+            odom_stamps.add((stamp.sec, stamp.nanosec))
 
         deadline = time.monotonic() + config.timeout
         while time.monotonic() < deadline:
-            rclpy.spin_once(node, timeout_sec=0.05)
-            if node.odom_message is not None and node.sensor_message is not None:
-                # Continue briefly so tf_static and graph discovery can settle.
-                if deadline - time.monotonic() > 0.2:
-                    deadline = time.monotonic() + 0.2
+            topic_map = dict(node.get_topic_names_and_types())
+            odom_types = topic_map.get(config.odom_topic, [])
+            sensor_types = topic_map.get(config.sensor_topic, [])
+            if not odom_subscribed and "nav_msgs/msg/Odometry" in odom_types:
+                node.diagnostic_subscriptions.append(node.create_subscription(
+                    Odometry, config.odom_topic, receive_odom,
+                    qos_profile_sensor_data,
+                ))
+                odom_subscribed = True
+            if node.sensor_type is None:
+                for type_name, message_type in (
+                    ("sensor_msgs/msg/LaserScan", LaserScan),
+                    ("sensor_msgs/msg/PointCloud2", PointCloud2),
+                ):
+                    if type_name in sensor_types:
+                        node.sensor_type = type_name
+                        node.diagnostic_subscriptions.append(node.create_subscription(
+                            message_type, config.sensor_topic,
+                            lambda message: setattr(node, "sensor_message", message),
+                            qos_profile_sensor_data,
+                        ))
+                        break
+            rclpy.spin_once(node, timeout_sec=min(
+                0.05, max(0.0, deadline - time.monotonic()),
+            ))
 
+        sensor_topic_result = validate_sensor_topic(config.sensor_topic, sensor_types)
         results = [validate_distribution(distro)]
         results.append(_check_transform(
             node, config.odom_frame, config.base_frame, "TF-001",
@@ -128,9 +123,28 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
                 "Correct the publisher type or topic selection.",
             ))
         else:
-            results.append(validate_odom_message(
+            odom_result = validate_odom_message(
                 node.odom_message, config.odom_frame, config.base_frame,
-            ))
+            )
+            if odom_result.status == Status.PASS:
+                stamp = node.odom_message.header.stamp
+                age = (node.get_clock().now().nanoseconds / 1e9
+                       - stamp.sec - stamp.nanosec / 1e9)
+                if age > 1.0:
+                    odom_result = CheckResult(
+                        "ODOM-001", "Odometry stream", Status.FAIL,
+                        f"Odometry timestamp is stale ({age:.2f} sec old)",
+                        ("The publisher may have stopped updating timestamps.",),
+                        "Inspect odometry publication and ROS time settings.",
+                    )
+                elif age < -0.1 or len(odom_stamps) < 2:
+                    odom_result = CheckResult(
+                        "ODOM-001", "Odometry stream", Status.WARN,
+                        "Odometry time is ahead or timestamp progression was not observed",
+                        ("The observation may be too short, or ROS clocks disagree.",),
+                        "Check ROS time settings and repeat with a longer --timeout.",
+                    )
+            results.append(odom_result)
 
         if sensor_topic_result is not None:
             results.append(sensor_topic_result)
