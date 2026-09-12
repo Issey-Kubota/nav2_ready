@@ -6,8 +6,8 @@ with the observed value and a concrete next step.
 
 Version 0.1 targets ROS 2 Jazzy and intentionally keeps the scope small.
 
-Development snapshot, not a validated release. ROS 2 build and live topic/TF/
-lifecycle integration tests are still pending. PASS does not certify navigation
+Development snapshot, not a released package. ROS 2 Jazzy builds and synthetic
+topic/TF/lifecycle integration tests run in CI. PASS does not certify navigation
 correctness or robot safety. Please report questions through GitHub Issues.
 
 ## Checks
@@ -57,6 +57,14 @@ When using simulation time, pass the standard ROS parameter:
 ros2 run nav2_ready check --ros-args -p use_sim_time:=true
 ```
 
+Match topic and frame overrides to the robot's Nav2 parameters. For example,
+the Jazzy TurtleBot 3 simulation uses `base_footprint`:
+
+```bash
+ros2 run nav2_ready check --base-frame base_footprint \
+  --ros-args -p use_sim_time:=true
+```
+
 Use `--help` to see topic, frame, namespace, and timeout overrides.
 
 ## Exit codes
@@ -70,7 +78,7 @@ Use `--help` to see topic, frame, namespace, and timeout overrides.
 
 ## v0.1 limitations
 
-- ROS 2 Jazzy is the initial target; runtime validation is pending.
+- ROS 2 Jazzy is the initial target.
 - Exactly one obstacle sensor topic is checked per run.
 - PointCloud2 validation is structural only; point-cloud quality and voxel-layer
   configuration are not diagnosed.

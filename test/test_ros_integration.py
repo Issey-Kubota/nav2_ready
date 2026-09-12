@@ -12,6 +12,7 @@ import pytest
 @pytest.mark.parametrize("scenario,expected", [
     ("scan", None),
     ("cloud", None),
+    ("future_global_tf", None),
     ("missing_sensor_tf", "[FAIL] TF-002"),
     ("missing_odom_tf", "[FAIL] TF-001"),
     ("wrong_odom_frame", "[FAIL] ODOM-001"),
@@ -92,11 +93,15 @@ def run_robot(scenario):
         for name in ("controller_server", "planner_server", "behavior_server", "bt_navigator"):
             node.create_service(GetState, f"/{name}/get_state", state)
 
-    def transform(parent, child):
+    def transform(parent, child, future_seconds=0.0):
         msg = TransformStamped()
         msg.header.frame_id = parent
         msg.child_frame_id = child
         msg.header.stamp = node.get_clock().now().to_msg()
+        msg.header.stamp.nanosec += int(future_seconds * 1_000_000_000)
+        if msg.header.stamp.nanosec >= 1_000_000_000:
+            msg.header.stamp.sec += 1
+            msg.header.stamp.nanosec -= 1_000_000_000
         msg.transform.rotation.w = 1.0
         return msg
 
@@ -106,7 +111,9 @@ def run_robot(scenario):
     frozen_stamp.sec -= 10
 
     def publish():
-        transforms = [transform("map", "odom")]
+        transforms = [transform(
+            "map", "odom", 0.8 if scenario == "future_global_tf" else 0.0,
+        )]
         if scenario != "missing_odom_tf":
             transforms.append(transform("odom", "base_link"))
         dynamic.sendTransform(transforms)

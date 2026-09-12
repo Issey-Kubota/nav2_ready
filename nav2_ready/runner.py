@@ -237,7 +237,10 @@ def _check_transform(node, target: str, source: str, check_id: str,
                 ("The transform broadcaster may have stopped updating.",),
                 "Inspect the broadcaster and ROS time configuration.",
             )
-        if age < -0.1:
+        # Localization systems may intentionally post-date transforms. Nav2
+        # AMCL defaults to a 1.0 second transform_tolerance, so leave a small
+        # margin before treating a future timestamp as a clock mismatch.
+        if age < -1.1:
             return CheckResult(
                 check_id, title, Status.WARN,
                 f"Transform timestamp is {-age:.2f} sec ahead of diagnostic time",
