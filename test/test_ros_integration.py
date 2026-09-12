@@ -23,7 +23,18 @@ import pytest
 ])
 def test_robot_graph(scenario, expected):
     pytest.importorskip("rclpy")
-    env = dict(os.environ, ROS_DOMAIN_ID="174", ROS_LOCALHOST_ONLY="1")
+    scenarios = (
+        "scan", "cloud", "future_global_tf", "missing_sensor_tf",
+        "missing_odom_tf", "wrong_odom_frame", "frozen_odom", "inactive",
+        "missing_cmd", "no_nav",
+    )
+    # DDS graph cleanup is asynchronous. A distinct domain per scenario avoids
+    # endpoints from the preceding subprocess affecting discovery.
+    env = dict(
+        os.environ,
+        ROS_DOMAIN_ID=str(174 + scenarios.index(scenario)),
+        ROS_LOCALHOST_ONLY="1",
+    )
     robot = subprocess.Popen(
         [sys.executable, __file__, scenario], env=env,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
