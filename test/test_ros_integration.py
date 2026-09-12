@@ -52,8 +52,12 @@ def test_robot_graph(scenario, expected):
     reader.start()
     try:
         assert ready.wait(10), "".join(logs)
+        # Give discovery time to propagate between the two fresh participants;
+        # loaded CI runners can take longer than a local ROS graph.
+        time.sleep(1.0)
+        assert robot.poll() is None, "".join(logs)
         result = subprocess.run(
-            ["ros2", "run", "nav2_ready", "check", "--timeout", "3"],
+            ["ros2", "run", "nav2_ready", "check", "--timeout", "5"],
             env=env, capture_output=True, text=True, timeout=20,
         )
         report = result.stdout + result.stderr
@@ -122,6 +126,8 @@ def run_robot(scenario):
     frozen_stamp.sec -= 10
 
     def publish():
+        if scenario != "missing_sensor_tf":
+            static.sendTransform(transform("base_link", "laser"))
         transforms = [transform(
             "map", "odom", 0.8 if scenario == "future_global_tf" else 0.0,
         )]
