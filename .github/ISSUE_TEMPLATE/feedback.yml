@@ -1,0 +1,53 @@
+name: Usage feedback or question
+description: Share the Nav2 integration problem you faced and whether this tool helped
+title: "[Feedback]: "
+labels:
+  - feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Real integration experiences guide the next version. A short report is useful even when Nav2 Ready worked as expected.
+  - type: textarea
+    id: original_problem
+    attributes:
+      label: What were you trying to diagnose?
+      description: Describe the custom robot or Nav2 migration problem without private project details.
+    validations:
+      required: true
+  - type: dropdown
+    id: usefulness
+    attributes:
+      label: Did Nav2 Ready help?
+      options:
+        - Yes, it identified the cause
+        - Partly, it narrowed down the cause
+        - No, the result did not help
+        - I have not run it yet
+    validations:
+      required: true
+  - type: textarea
+    id: useful_result
+    attributes:
+      label: Most useful or confusing result
+      description: Include the check ID, such as TF-001 or ODOM-001, when available.
+    validations:
+      required: true
+  - type: textarea
+    id: missing_information
+    attributes:
+      label: What information was missing?
+      description: Tell us what you still had to investigate manually.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include ROS distribution, robot type, and sensor type if you can share them.
+      placeholder: ROS 2 Jazzy, custom differential-drive robot, LaserScan
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed credentials and private robot or company information.
+          required: true

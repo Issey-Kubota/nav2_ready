@@ -1,0 +1,73 @@
+name: Bug report
+description: Report an incorrect diagnosis, crash, or installation problem
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve Nav2 Ready. Remove private robot or company information before submitting logs.
+  - type: dropdown
+    id: problem_type
+    attributes:
+      label: Problem type
+      options:
+        - Incorrect PASS, WARN, or FAIL result
+        - Installation or build failure
+        - CLI crash or unexpected exit
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      description: Include topic and frame overrides, but remove sensitive values.
+      placeholder: ros2 run nav2_ready check --base-frame base_footprint
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Nav2 Ready output
+      description: Paste the complete terminal output when possible.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: Which check should have behaved differently, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include ROS distribution, OS, installation method, sensor type, and whether simulation time is enabled.
+      placeholder: |
+        ROS distribution: Jazzy
+        OS: Ubuntu 24.04
+        Installation: source build
+        Sensor: LaserScan
+        use_sim_time: false
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Describe the smallest sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed credentials and private robot or company information.
+          required: true
