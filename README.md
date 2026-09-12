@@ -67,6 +67,52 @@ ros2 run nav2_ready check --base-frame base_footprint \
 
 Use `--help` to see topic, frame, namespace, and timeout overrides.
 
+## Example output
+
+A ready Jazzy TurtleBot 3 simulation reports all eight checks as passing:
+
+```text
+Nav2 Ready v0.1.0
+ROS distribution: jazzy
+Observation time: 5.0 sec
+
+[PASS] ENV-001 ROS 2 distribution
+       Detected: jazzy
+
+[PASS] TF-001 Odometry transform
+       Transform available: base_footprint -> odom
+
+[PASS] ODOM-001 Odometry stream
+       Received nav_msgs/msg/Odometry (odom -> base_footprint)
+
+[PASS] SENSOR-001 Obstacle sensor stream
+       Received sensor_msgs/msg/LaserScan (frame: base_scan)
+
+[PASS] TF-002 Sensor transform
+       Transform available: base_scan -> base_footprint
+
+[PASS] CMD-001 Velocity command input
+       Compatible subscriber found: geometry_msgs/msg/Twist
+
+[PASS] NAV-001 Nav2 lifecycle
+       Required nodes active: behavior_server, bt_navigator, controller_server, planner_server
+
+[PASS] TF-003 Global localization transform
+       Transform available: odom -> map
+
+Overall: PASS
+8 passed, 0 warned, 0 failed
+```
+
+Failures include the observed condition, a likely cause, and a next step:
+
+```text
+[FAIL] ODOM-001 Odometry stream
+       Topic not found: /odom
+       Cause: The odometry publisher may not be running.
+       Check: Start the odometry publisher or pass --odom-topic.
+```
+
 ## Exit codes
 
 | Code | Meaning |

@@ -18,7 +18,18 @@ from .validators import (
 
 @dataclass(frozen=True)
 class Config:
-    """CLI-adjustable names; defaults match a conventional Nav2 setup."""
+    """Store CLI-adjustable ROS names and observation settings.
+
+    Attributes:
+        odom_topic: Odometry topic to inspect.
+        sensor_topic: LaserScan or PointCloud2 topic to inspect.
+        cmd_vel_topic: Velocity command topic expected by the controller.
+        base_frame: Robot base frame configured in Nav2.
+        odom_frame: Locally continuous odometry frame.
+        map_frame: Global localization frame.
+        namespace: Namespace containing the Nav2 lifecycle nodes.
+        timeout: ROS graph and message observation duration in seconds.
+    """
 
     odom_topic: str = "/odom"
     sensor_topic: str = "/scan"
@@ -39,7 +50,15 @@ CORE_LIFECYCLE_NODES = (
 
 
 def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | None]:
-    """Run all checks inside one short-lived rclpy node."""
+    """Run all checks inside one short-lived ROS 2 node.
+
+    Args:
+        config: Topic names, frame names, namespace, and timeout to use.
+        ros_args: Optional ROS-specific arguments forwarded to ``rclpy.init``.
+
+    Returns:
+        An ordered result list and the detected ROS distribution name.
+    """
 
     import rclpy
     from lifecycle_msgs.srv import GetState
@@ -50,7 +69,14 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
     from tf2_ros import Buffer, TransformException, TransformListener
 
     class DiagnosticNode(Node):
+        """Collect transient ROS messages and TF data for one diagnostic run."""
+
         def __init__(self) -> None:
+            """Create state used by lazily discovered subscriptions.
+
+            Returns:
+                None.
+            """
             super().__init__("nav2_ready")
             self.odom_message = None
             self.sensor_message = None
@@ -69,12 +95,23 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
         odom_stamps = set()
 
         def receive_odom(message):
+            """Keep the latest odometry sample and observed timestamps.
+
+            Args:
+                message: Newly received Odometry message.
+
+            Returns:
+                None.
+            """
+
             node.odom_message = message
             stamp = message.header.stamp
             odom_stamps.add((stamp.sec, stamp.nanosec))
 
         deadline = time.monotonic() + config.timeout
         while time.monotonic() < deadline:
+            # Discovery is asynchronous, so topics are inspected throughout
+            # the observation window instead of only once at startup.
             topic_map = dict(node.get_topic_names_and_types())
             odom_types = topic_map.get(config.odom_topic, [])
             sensor_types = topic_map.get(config.sensor_topic, [])
@@ -127,6 +164,8 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
                 node.odom_message, config.odom_frame, config.base_frame,
             )
             if odom_result.status == Status.PASS:
+                # A recent stamp is not enough to prove a live stream; retain
+                # distinct stamps to detect publishers frozen at one value.
                 stamp = node.odom_message.header.stamp
                 age = (node.get_clock().now().nanoseconds / 1e9
                        - stamp.sec - stamp.nanosec / 1e9)
@@ -209,6 +248,20 @@ def run_checks(config: Config, ros_args=None) -> tuple[list[CheckResult], str | 
 def _check_transform(node, target: str, source: str, check_id: str,
                      title: str, transform_exception,
                      require_fresh: bool = False) -> CheckResult:
+    """Check TF connectivity and, when requested, timestamp freshness.
+
+    Args:
+        node: Diagnostic node holding the TF buffer and ROS clock.
+        target: Target frame passed to TF lookup.
+        source: Source frame passed to TF lookup.
+        check_id: Stable identifier included in the result.
+        title: Human-readable check title.
+        transform_exception: TF exception type raised by failed lookups.
+        require_fresh: Whether to reject zero or stale timestamps.
+
+    Returns:
+        A PASS, WARN, or FAIL result describing the transform.
+    """
     from rclpy.time import Time
 
     try:
@@ -253,6 +306,17 @@ def _check_transform(node, target: str, source: str, check_id: str,
 
 
 def _get_lifecycle_states(node, config: Config, get_state_type, rclpy):
+    """Query the required Nav2 lifecycle services with bounded waits.
+
+    Args:
+        node: Diagnostic ROS node used for service discovery and calls.
+        config: Configuration containing the Nav2 namespace.
+        get_state_type: Lifecycle ``GetState`` service class.
+        rclpy: Imported rclpy module used to spin for responses.
+
+    Returns:
+        A node-name-to-state mapping, or ``None`` when Nav2 is not detected.
+    """
     service_names = {name for name, _ in node.get_service_names_and_types()}
     paths = {
         name: _namespaced(config.namespace, name, "get_state")
@@ -278,6 +342,16 @@ def _get_lifecycle_states(node, config: Config, get_state_type, rclpy):
 
 
 def _namespaced(namespace: str, node_name: str, service: str) -> str:
+    """Build an absolute ROS service path without duplicate slashes.
+
+    Args:
+        namespace: Optional top-level namespace.
+        node_name: ROS node name.
+        service: Service basename.
+
+    Returns:
+        An absolute service path beginning with ``/``.
+    """
     prefix = namespace.strip("/")
     parts = [part for part in (prefix, node_name, service) if part]
     return "/" + "/".join(parts)

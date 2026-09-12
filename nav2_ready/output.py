@@ -7,6 +7,16 @@ from .result import CheckResult, Status, overall_status
 
 
 def render_report(results: Iterable[CheckResult], distro: str | None, timeout: float) -> str:
+    """Render diagnostic results as a terminal-friendly report.
+
+    Args:
+        results: Individual diagnostic results in display order.
+        distro: Detected ROS distribution, or ``None`` when unavailable.
+        timeout: Observation duration in seconds.
+
+    Returns:
+        A multiline report containing details and aggregate counts.
+    """
     items = list(results)
     lines = [
         "Nav2 Ready v0.1.0",

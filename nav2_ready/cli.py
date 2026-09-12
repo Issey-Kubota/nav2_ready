@@ -9,6 +9,11 @@ from .runner import Config, run_checks
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Create the parser for Nav2 Ready arguments.
+
+    Returns:
+        A configured argument parser for diagnostic and ROS arguments.
+    """
     parser = argparse.ArgumentParser(
         description="Check whether a custom robot meets basic Nav2 prerequisites.",
     )
@@ -24,6 +29,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    """Run the command-line interface.
+
+    Args:
+        argv: Optional arguments excluding the executable name. When omitted,
+            arguments are read from ``sys.argv``.
+
+    Returns:
+        The documented process exit code from 0 through 3.
+    """
     args, ros_args = build_parser().parse_known_args(argv)
     if ros_args and "--ros-args" not in ros_args:
         print(

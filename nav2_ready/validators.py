@@ -8,6 +8,14 @@ from .result import CheckResult, Status
 
 
 def validate_distribution(distro: str | None) -> CheckResult:
+    """Validate the detected ROS distribution.
+
+    Args:
+        distro: Value of the ``ROS_DISTRO`` environment variable.
+
+    Returns:
+        PASS for Jazzy, WARN for another distribution, or FAIL when unset.
+    """
     if distro == "jazzy":
         return CheckResult("ENV-001", "ROS 2 distribution", Status.PASS, "Detected: jazzy")
     if not distro:
@@ -30,6 +38,16 @@ def validate_distribution(distro: str | None) -> CheckResult:
 
 
 def validate_odom_message(message: Any, odom_frame: str, base_frame: str) -> CheckResult:
+    """Validate one Odometry message and its frame identifiers.
+
+    Args:
+        message: Odometry-like object, or ``None`` when no sample arrived.
+        odom_frame: Expected parent frame identifier.
+        base_frame: Expected child frame identifier.
+
+    Returns:
+        A result covering message presence, frames, and finite numeric values.
+    """
     if message is None:
         return CheckResult(
             "ODOM-001", "Odometry stream", Status.FAIL, "No Odometry message received",
@@ -73,6 +91,14 @@ def validate_odom_message(message: Any, odom_frame: str, base_frame: str) -> Che
 
 
 def validate_laser_scan(message: Any) -> CheckResult:
+    """Validate the minimum LaserScan contract needed by Nav2 Ready.
+
+    Args:
+        message: LaserScan-like object, or ``None`` when no sample arrived.
+
+    Returns:
+        PASS for a structurally usable scan, otherwise FAIL.
+    """
     if message is None:
         return _missing_sensor("sensor_msgs/msg/LaserScan")
     if not message.header.frame_id:
@@ -90,6 +116,14 @@ def validate_laser_scan(message: Any) -> CheckResult:
 
 
 def validate_point_cloud(message: Any) -> CheckResult:
+    """Validate the minimum PointCloud2 structure needed by Nav2 Ready.
+
+    Args:
+        message: PointCloud2-like object, or ``None`` when no sample arrived.
+
+    Returns:
+        PASS for a non-empty cloud with XYZ fields, otherwise FAIL.
+    """
     if message is None:
         return _missing_sensor("sensor_msgs/msg/PointCloud2")
     if not message.header.frame_id:
@@ -109,6 +143,15 @@ def validate_point_cloud(message: Any) -> CheckResult:
 
 
 def validate_sensor_topic(topic: str, topic_types: Iterable[str]) -> CheckResult | None:
+    """Check whether a sensor topic advertises a supported message type.
+
+    Args:
+        topic: Sensor topic selected by the user.
+        topic_types: Message type names discovered on the topic.
+
+    Returns:
+        A FAIL result for missing or unsupported topics, otherwise ``None``.
+    """
     types = tuple(topic_types)
     if not types:
         return CheckResult(
@@ -129,6 +172,15 @@ def validate_sensor_topic(topic: str, topic_types: Iterable[str]) -> CheckResult
 
 
 def validate_cmd_vel_subscribers(topic: str, types: Iterable[str]) -> CheckResult:
+    """Validate subscribers accepting Nav2 velocity commands.
+
+    Args:
+        topic: Velocity command topic selected by the user.
+        types: Subscriber message types discovered on the topic.
+
+    Returns:
+        PASS for one compatible type, WARN for ambiguity, otherwise FAIL.
+    """
     found = set(types)
     supported = {"geometry_msgs/msg/Twist", "geometry_msgs/msg/TwistStamped"}
     compatible = found & supported
@@ -160,6 +212,15 @@ def validate_cmd_vel_subscribers(topic: str, types: Iterable[str]) -> CheckResul
 
 
 def validate_lifecycle(states: Mapping[str, str] | None) -> CheckResult:
+    """Validate the states of required Nav2 lifecycle nodes.
+
+    Args:
+        states: Mapping of node names to lifecycle labels, or ``None`` when
+            Nav2 services were not detected.
+
+    Returns:
+        PASS when all nodes are active, WARN when absent, otherwise FAIL.
+    """
     if not states:
         return CheckResult(
             "NAV-001", "Nav2 lifecycle", Status.WARN,
@@ -182,6 +243,14 @@ def validate_lifecycle(states: Mapping[str, str] | None) -> CheckResult:
 
 
 def _missing_sensor(expected_type: str) -> CheckResult:
+    """Create a missing-sensor failure result.
+
+    Args:
+        expected_type: Fully qualified ROS message type expected by the check.
+
+    Returns:
+        A SENSOR-001 failure describing the missing message.
+    """
     return CheckResult(
         "SENSOR-001", "Obstacle sensor stream", Status.FAIL,
         f"No {expected_type} message received",
@@ -191,6 +260,14 @@ def _missing_sensor(expected_type: str) -> CheckResult:
 
 
 def _bad_sensor(observed: str) -> CheckResult:
+    """Create an invalid-sensor failure result.
+
+    Args:
+        observed: Short description of the invalid value or structure.
+
+    Returns:
+        A SENSOR-001 failure containing the observation.
+    """
     return CheckResult(
         "SENSOR-001", "Obstacle sensor stream", Status.FAIL, observed,
         ("The sensor message does not meet the minimum Nav2 input contract.",),
