@@ -4,11 +4,14 @@ Nav2 Ready is a read-only CLI that checks whether a custom ROS 2 robot meets
 the basic interface requirements for Nav2. It reports `PASS`, `WARN`, or `FAIL`
 with the observed value and a concrete next step.
 
-Version 0.1 targets ROS 2 Jazzy and intentionally keeps the scope small.
+[Nav2 Ready v0.1.0](https://github.com/Issey-Kubota/nav2_ready/releases/tag/v0.1.0)
+is the current release. It targets ROS 2 Jazzy and intentionally keeps the
+scope small. The `main` branch may contain changes intended for a future
+release; use the v0.1.0 tag when you need the released version.
 
-Development snapshot, not a released package. ROS 2 Jazzy builds and synthetic
-topic/TF/lifecycle integration tests run in CI. PASS does not certify navigation
-correctness or robot safety. Please report questions through GitHub Issues.
+ROS 2 Jazzy builds and synthetic topic/TF/lifecycle integration tests run in
+CI. PASS does not certify navigation correctness or robot safety. Please report
+questions through GitHub Issues.
 
 ## Checks
 
@@ -29,7 +32,8 @@ Nav2 Ready never publishes a velocity command and cannot move the robot.
 source /opt/ros/jazzy/setup.bash
 mkdir -p ~/nav2_ready_ws/src
 cd ~/nav2_ready_ws/src
-git clone https://github.com/Issey-Kubota/nav2_ready.git nav2_ready
+git clone --branch v0.1.0 --depth 1 \
+  https://github.com/Issey-Kubota/nav2_ready.git nav2_ready
 cd ..
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install

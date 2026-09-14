@@ -1,6 +1,6 @@
 # Release notes
 
-## v0.1.0 (draft)
+## v0.1.0
 
 Nav2 Ready v0.1.0 is the first public release of a read-only CLI for checking
 whether a custom ROS 2 robot exposes the basic interfaces expected by Nav2.
